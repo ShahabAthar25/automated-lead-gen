@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     reddit_username: str
     
     gemini_api_key: str
+    discord_webhook_url: str
 
     database_url: str = "sqlite:///leads.db"
 

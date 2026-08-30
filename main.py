@@ -2,56 +2,90 @@ import logging
 from pprint import pprint
 
 from reddit_lead_gen.adapters.database import DatabaseAdapter
+from reddit_lead_gen.adapters.messaging import DiscordNotifier
 from reddit_lead_gen.adapters.reddit_client import RedditClient
 from reddit_lead_gen.core.classifier import LeadClassifier
 from reddit_lead_gen.models.reddit import QualifiedLead
 
-# Setup logging to monitor pipeline events
+# Setup logging to see output in console
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-# 1. Initialize Adapters & Services
-client = RedditClient()
-classifier = LeadClassifier()
-db = DatabaseAdapter()
 
-print("--- 1. FETCHING POSTS ---")
-posts = client.fetch_subreddit_posts("forhire")
-print(f"Fetched {len(posts)} posts from r/forhire.")
+def main() -> None:
+    print("\n--- 🚀 STARTING DISCORD WEBHOOK & PIPELINE TEST ---")
 
-saved_count = 0
+    # 1. Initialize all adapters and services
+    client = RedditClient()
+    classifier = LeadClassifier()
+    db = DatabaseAdapter()
+    notifier = DiscordNotifier()
 
-print("\n--- 2. PROCESSING & CLASSIFYING ---")
-for post in posts:
-    # Check DB first to skip duplicate processing
-    if db.is_post_seen(post.id):
-        print(f"⏭️ Skipping {post.id} (already in DB)")
-        continue
+    # Check Webhook config
+    if not notifier.webhook_url:
+        logging.error(
+            "❌ DISCORD_WEBHOOK_URL is missing from your .env file! "
+            "Add it before running this test."
+        )
+        return
 
-    # Fast Stage-1 local filter
-    if classifier.is_keyword_candidate(post):
-        # Stage-2 Gemini LLM classification
-        score, analysis = classifier.classify_lead(post)
+    # 2. Fetch fresh posts
+    target_subreddit = "forhire"
+    print(f"\n📡 Fetching posts from r/{target_subreddit}...")
+    posts = client.fetch_subreddit_posts(target_subreddit)
+    print(f"Fetched {len(posts)} posts.\n")
 
-        if analysis and score >= 0.7:
-            # Construct unified domain model
-            lead = QualifiedLead(post=post, analysis=analysis, status="new")
+    alert_sent = False
 
-            print("\n🔥 HIGH VALUE LEAD FOUND 🔥")
-            pprint(lead.model_dump())
+    # 3. Process candidate posts
+    for post in posts:
+        # Check DB to avoid unnecessary re-analysis
+        if db.is_post_seen(post.id):
+            logging.info(f"⏭️ Post {post.id} already seen in DB. Skipping.")
+            continue
 
-            # Save to SQLite database using DatabaseAdapter
-            db.save_lead(lead)
-            saved_count += 1
+        # Stage 1: Fast keyword check
+        if classifier.is_keyword_candidate(post):
+            logging.info(f"🔍 Analyzing candidate post: {post.title[:50]}...")
 
-print(f"\nSuccessfully processed posts. Saved {saved_count} new leads to DB.")
+            # Stage 2: Gemini classification
+            score, analysis = classifier.classify_lead(post)
 
-print("\n--- 3. TESTING DB FETCH CAPABILITIES ---")
-# Fetch back all high-scoring leads stored in the database
-high_score_leads = db.fetch_high_score_leads(min_score=0.7)
-print(f"Found {len(high_score_leads)} total qualified leads stored in DB:\n")
+            if analysis and score >= 0.7:
+                # Wrap into unified domain model
+                lead = QualifiedLead(post=post, analysis=analysis, status="new")
 
-for stored_lead in high_score_leads:
-    print(f"📌 [ID: {stored_lead.post.id}] {stored_lead.post.title}")
-    print(f"   Score: {stored_lead.analysis.score} | Budget: {stored_lead.analysis.extracted_budget}")
-    print(f"   Reasoning: {stored_lead.analysis.reasoning}")
-    print(f"   Link: {stored_lead.post.permalink}\n")
+                print("\n🔥 HIGH VALUE LEAD FOUND 🔥")
+                pprint(lead.model_dump())
+
+                # Save to SQLite
+                db.save_lead(lead)
+
+                # Send live alert to Discord
+                print("📢 Dispatching Discord Webhook notification...")
+                success = notifier.send_lead_alert(lead)
+
+                if success:
+                    print("✅ DISCORD ALERT SENT SUCCESSFULLY! Check your Discord channel.\n")
+                    alert_sent = True
+                    break  # Break after sending 1 test alert
+                else:
+                    print("❌ Failed to send Discord alert.\n")
+
+    # 4. Fallback: Test with existing DB record if no new post triggered an alert
+    if not alert_sent:
+        print("\nℹ️ No new actionable posts found in current RSS batch.")
+        print("Fetching existing lead from database to test Discord Webhook...")
+
+        existing_leads = db.fetch_high_score_leads(min_score=0.7)
+        if existing_leads:
+            test_lead = existing_leads[0]
+            print(f"Testing Webhook using existing lead: {test_lead.post.id}")
+            success = notifier.send_lead_alert(test_lead)
+            if success:
+                print("✅ TEST ALERT SENT TO DISCORD SUCCESSFULLY!\n")
+        else:
+            print("⚠️ No qualified leads stored in database yet to send a test alert.")
+
+
+if __name__ == "__main__":
+    main()

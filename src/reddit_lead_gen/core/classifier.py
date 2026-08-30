@@ -20,7 +20,7 @@ DISQUALIFY_KEYWORDS = [
 # Keywords required to trigger an LLM check
 TARGET_KEYWORDS = [
     "python", "bot", "scraper", "scraping", "automation", 
-    "fastapi", "django", "discord", "api", "backend"
+    "fastapi", "django", "discord", "api", "backend", "[hiring]"
 ]
 
 
