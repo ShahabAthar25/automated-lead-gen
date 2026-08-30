@@ -17,6 +17,7 @@ dependencies = [
     "pydantic-settings[toml] (>=2.15.0,<3.0.0)",
     "beautifulsoup4 (>=4.15.0,<5.0.0)",
     "google-genai (>=2.20.0,<3.0.0)",
+    "sqlalchemy (>=2.0.52,<3.0.0)",
 ]
 
 [tool.poetry]

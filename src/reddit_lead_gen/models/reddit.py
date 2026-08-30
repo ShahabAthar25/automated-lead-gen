@@ -93,3 +93,30 @@ class QualifiedLead(BaseModel):
     def is_actionable(self) -> bool:
         """Helper to verify lead quality."""
         return self.analysis.is_hiring and self.analysis.score >= 0.7
+    
+    @classmethod
+    def from_db_record(cls, record) -> "QualifiedLead":
+        """Convert a SQLAlchemy LeadTable row back into a QualifiedLead model."""
+        tags_list = record.tags.split(",") if record.tags else []
+        skills_list = record.matched_skills.split(",") if record.matched_skills else []
+
+        post = RedditRSSPost(
+            id=record.id,
+            title=record.title,
+            permalink=record.permalink,
+            author=record.author,
+            body=record.body,
+            created_utc=record.created_utc,
+            subreddit=record.subreddit,
+            tags=tags_list,
+        )
+
+        analysis = LeadAnalysis(
+            is_hiring=record.is_hiring,
+            score=record.score,
+            extracted_budget=record.extracted_budget,
+            matched_skills=skills_list,
+            reasoning=record.reasoning or "",
+        )
+
+        return cls(post=post, analysis=analysis, status=record.status)
