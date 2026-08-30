@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field, HttpUrl
 
+from reddit_lead_gen.models.gemini import LeadAnalysis
+
 
 class RedditRSSPost(BaseModel):
     """
@@ -58,7 +60,11 @@ class RedditRSSPost(BaseModel):
 
         # Extract tag names safely
         raw_tags = entry.get("tags", [])
-        tags = [t.get("term") for t in raw_tags if isinstance(t, dict) and t.get("term")]
+        tags = [
+            t.get("term").strip() 
+            for t in raw_tags 
+            if isinstance(t, dict) and t.get("term") and isinstance(t.get("term"), str)
+        ]
 
         #  Clean author username
         clean_author = entry.get("author", "unknown").replace("/u/", "").split("/")[-1]
@@ -73,3 +79,17 @@ class RedditRSSPost(BaseModel):
             subreddit=subreddit,
             tags=tags,
         )
+
+class QualifiedLead(BaseModel):
+    """
+    Combined domain model representing a high-value lead 
+    ready for database storage and alert notifications.
+    """
+    post: RedditRSSPost
+    analysis: LeadAnalysis
+    status: str = Field(default="new", description="Outreach status: 'new', 'contacted', 'ignored'")
+
+    @property
+    def is_actionable(self) -> bool:
+        """Helper to verify lead quality."""
+        return self.analysis.is_hiring and self.analysis.score >= 0.7

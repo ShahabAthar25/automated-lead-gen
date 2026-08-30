@@ -1,5 +1,4 @@
 import logging
-import json
 from google import genai
 from google.genai import types
 
@@ -49,11 +48,14 @@ class LeadClassifier:
         if not self.is_keyword_candidate(post):
             return 0.0, None
 
+        tags_str = ", ".join(post.tags) if post.tags else "None"
+
         prompt = f"""
         Analyze this Reddit post to determine if it is a legitimate client looking to hire a developer.
         
         Post Subreddit: r/{post.subreddit}
         Post Title: {post.title}
+        Post Tags: {tags_str}
         Post Body:
         {post.body[:1500]}
         """
@@ -61,7 +63,7 @@ class LeadClassifier:
         try:
             # Force structured JSON response matching LeadAnalysis schema
             response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
