@@ -120,3 +120,5 @@ class QualifiedLead(BaseModel):
         )
 
         return cls(post=post, analysis=analysis, status=record.status)
+
+
