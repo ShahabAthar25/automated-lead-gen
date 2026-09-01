@@ -1,0 +1,77 @@
+# ==============================================================================
+# REDDIT LEAD GENERATION ENGINE — OPERATIONAL CONFIGURATION
+# (Sensitive credentials like GEMINI_API_KEY belong in .env)
+# ==============================================================================
+
+[app]
+name = "reddit-lead-gen"
+log_level = "INFO"
+
+[target_subreddits]
+active = [
+    "forhire",
+    "freelance_forhire",
+    "python",
+    "webscraping"
+]
+
+[polling]
+# Main loop ticker check rate (seconds)
+poll_tick_seconds = 5
+
+# Global adaptive timing boundaries (seconds)
+default_base_interval = 120   # 2 minutes starting baseline
+default_min_interval = 45     # 45 seconds floor during peak post bursts
+default_max_interval = 900    # 15 minutes ceiling during off-peak quiet hours
+
+[pipeline]
+# Minimum score required for Gemini lead qualification (0.0 to 1.0)
+min_lead_score = 0.60
+
+# Fast-filter triggers checked before calling Gemini API
+candidate_keywords = [
+    "hiring",
+    "budget",
+    "paid",
+    "looking for",
+    "need a developer",
+    "python",
+    "scraper",
+    "automation",
+    "api",
+    "bot"
+]
+
+[user_profile]
+primary_role = "Python Automation & Full-Stack Developer"
+target_services = [
+    "Web Scraping & Data Extraction",
+    "Automation Scripts & Bots",
+    "API Development & Backend Integration",
+    "Full-Stack Web Applications (FastAPI, React)"
+]
+
+dealbreakers = [
+    "Unpaid equity-only offers",
+    "Fixed budgets under $50",
+    "Mobile app development (iOS/Android native)",
+    "WordPress/PHP site maintenance"
+]
+
+[database]
+db_filename = "reddit_leads.db"
+
+# ==============================================================================
+# PER-SUBREDDIT TIMING OVERRIDES
+# Custom intervals for subreddits with unique volume characteristics
+# ==============================================================================
+
+[subreddits.forhire]
+base_interval = 120
+min_interval = 45
+max_interval = 900   # ~46 posts/day average
+
+[subreddits.Pakfreelancers]
+base_interval = 180
+min_interval = 60
+max_interval = 1800  # Lower volume, longer ceiling (30 mins)
