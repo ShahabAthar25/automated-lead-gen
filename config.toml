@@ -1,6 +1,7 @@
 # ==============================================================================
 # REDDIT LEAD GENERATION ENGINE — OPERATIONAL CONFIGURATION
 # (Sensitive credentials like GEMINI_API_KEY belong in .env)
+# Built by: Shahab Athar (https://github.com/ShahabAthar25)
 # ==============================================================================
 
 [app]
@@ -35,14 +36,22 @@ candidate_keywords = [
     "paid",
     "looking for",
     "need a developer",
-    "python",
     "scraper",
     "automation",
     "api",
-    "bot"
+    "bot",
+    "python",
+    "scraping",
+    "fastapi",
+    "django",
+    "api",
+    "backend",
+    "[hiring]",
 ]
 
 [user_profile]
+# If you have a problem with the classification of the post and want to change the prompt
+# do it in src/reddit_lead_gen/core/classifier.py
 primary_role = "Python Automation & Full-Stack Developer"
 target_services = [
     "Web Scraping & Data Extraction",
@@ -53,13 +62,11 @@ target_services = [
 
 dealbreakers = [
     "Unpaid equity-only offers",
-    "Fixed budgets under $50",
-    "Mobile app development (iOS/Android native)",
-    "WordPress/PHP site maintenance"
 ]
 
 [database]
-db_filename = "reddit_leads.db"
+# Database connection string (SQLite is default and recommended for lean resource usage)
+database_url = "sqlite:///leads.db"
 
 # ==============================================================================
 # PER-SUBREDDIT TIMING OVERRIDES
@@ -71,7 +78,7 @@ base_interval = 120
 min_interval = 45
 max_interval = 900   # ~46 posts/day average
 
-[subreddits.Pakfreelancers]
+[subreddits.python]
 base_interval = 180
 min_interval = 60
 max_interval = 1800  # Lower volume, longer ceiling (30 mins)

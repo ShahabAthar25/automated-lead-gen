@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload, sessionmaker
 
 from reddit_lead_gen.db.leads import Base, QualifiedLeadORM, RawPostORM
 from reddit_lead_gen.models.reddit import QualifiedLead, RedditRSSPost
+from reddit_lead_gen.settings import settings
 
 
 def determine_post_type(title: str) -> str:
@@ -26,7 +27,7 @@ class DatabaseAdapter:
     Adapter bridging SQLAlchemy ORM operations with Pydantic domain models.
     """
 
-    def __init__(self, db_url: str = "sqlite:///leads.db") -> None:
+    def __init__(self, db_url: str = settings.database.database_url) -> None:
         self.engine = create_engine(
             db_url,
             connect_args={"check_same_thread": False} if "sqlite" in db_url else {},
@@ -74,8 +75,6 @@ class DatabaseAdapter:
         """
         Persist or update a QualifiedLead model into the database.
         """
-        self.save_raw_post(lead.post)
-
         with self.SessionLocal() as session:
             record = QualifiedLeadORM(
                 id=lead.post.id,

@@ -37,6 +37,8 @@ def main() -> None:
     posts = client.fetch_subreddit_posts(target_subreddit)
     print(f"Fetched {len(posts)} posts.\n")
 
+    pprint(posts)
+
     alert_sent = False
 
     # Process candidate posts

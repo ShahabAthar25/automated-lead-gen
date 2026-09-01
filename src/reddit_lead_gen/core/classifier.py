@@ -1,27 +1,42 @@
 import logging
+
 from google import genai
 from google.genai import types
 
-from reddit_lead_gen.models.reddit import RedditRSSPost
 from reddit_lead_gen.models.gemini import LeadAnalysis
+from reddit_lead_gen.models.reddit import RedditRSSPost
 from reddit_lead_gen.settings import settings
 
-# Keywords that instantly disqualify a post without calling the LLM
-DISQUALIFY_KEYWORDS = [
-    "[for hire]",
-    "for hire",
-    "[forhire]",
-    "offering my services",
-    "hire me",
-    "i am looking for work",
-    "i will build",
-]
 
-# Keywords required to trigger an LLM check
-TARGET_KEYWORDS = [
-    "python", "bot", "scraper", "scraping", "automation", 
-    "fastapi", "django", "discord", "api", "backend", "[hiring]"
-]
+def _build_classifier_prompt(post) -> str:
+    """Builds a dynamic prompt tailored to the user's specific skill set and dealbreakers."""
+
+    services_list = "\n".join([f"- {s}" for s in settings.user_profile.target_services])
+    dealbreakers_list = "\n".join(
+        [f"- {d}" for d in settings.user_profile.dealbreakers]
+    )
+
+    return f"""
+You are an expert freelance lead qualifier acting on behalf of a **{settings.user_profile.primary_role}**.
+
+Target Services Provided:
+{services_list}
+
+Strict Dealbreakers (Automatic Disqualification):
+{dealbreakers_list}
+
+---
+Analyze the following Reddit post:
+Subreddit: r/{post.subreddit}
+Title: {post.title}
+Body: {post.selftext}
+Tags: {post.tags}
+
+Evaluation Rules:
+1. Is the poster explicitly looking to hire or pay for services matching the target services above?
+2. Does the post violate any of the strict dealbreakers?
+3. Assign a fit score from 0.0 to 1.0 based on how well this client match aligns with the target role and services.
+"""
 
 
 class LeadClassifier:
@@ -35,10 +50,9 @@ class LeadClassifier:
         body_lower = post.body.lower()
         combined_text = f"{title_lower} {body_lower}"
 
-        if any(bad_kw in combined_text for bad_kw in DISQUALIFY_KEYWORDS):
-            return False
-
-        if not any(good_kw in combined_text for good_kw in TARGET_KEYWORDS):
+        if not any(
+            good_kw in combined_text for good_kw in settings.pipeline.candidate_keywords
+        ):
             return False
 
         return True
@@ -50,15 +64,7 @@ class LeadClassifier:
 
         tags_str = ", ".join(post.tags) if post.tags else "None"
 
-        prompt = f"""
-        Analyze this Reddit post to determine if it is a legitimate client looking to hire a developer.
-        
-        Post Subreddit: r/{post.subreddit}
-        Post Title: {post.title}
-        Post Tags: {tags_str}
-        Post Body:
-        {post.body[:1500]}
-        """
+        prompt = _build_classifier_prompt(post)
 
         try:
             # Force structured JSON response matching LeadAnalysis schema
@@ -68,7 +74,7 @@ class LeadClassifier:
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=LeadAnalysis,
-                    temperature=0.1,
+                    temperature=1.0,
                 ),
             )
 
