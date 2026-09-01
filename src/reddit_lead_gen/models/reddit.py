@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field, HttpUrl
 
+from reddit_lead_gen.db.leads import QualifiedLeadORM
+
 from reddit_lead_gen.models.gemini import LeadAnalysis
 
 
@@ -95,19 +97,21 @@ class QualifiedLead(BaseModel):
         return self.analysis.is_hiring and self.analysis.score >= 0.7
     
     @classmethod
-    def from_db_record(cls, record) -> "QualifiedLead":
+    def from_db_record(cls, record: "QualifiedLeadORM") -> "QualifiedLead":
         """Convert a SQLAlchemy LeadTable row back into a QualifiedLead model."""
-        tags_list = record.tags.split(",") if record.tags else []
+        tags_list = record.tags.split(",") if record.raw_post.tags else []
         skills_list = record.matched_skills.split(",") if record.matched_skills else []
 
+        raw = record.raw_post
+
         post = RedditRSSPost(
-            id=record.id,
-            title=record.title,
-            permalink=record.permalink,
-            author=record.author,
-            body=record.body,
-            created_utc=record.created_utc,
-            subreddit=record.subreddit,
+            id=raw.id,
+            title=raw.title,
+            permalink=raw.permalink,
+            author=raw.author,
+            body=raw.body,
+            created_utc=raw.created_utc,
+            subreddit=raw.subreddit,
             tags=tags_list,
         )
 

@@ -1,6 +1,7 @@
 import logging
 from pprint import pprint
 
+from reddit_lead_gen.adapters import database
 from reddit_lead_gen.adapters.database import DatabaseAdapter
 from reddit_lead_gen.adapters.messaging import DiscordNotifier
 from reddit_lead_gen.adapters.reddit_client import RedditClient
@@ -43,6 +44,8 @@ def main() -> None:
             logging.info(f"⏭️ Post {post.id} already seen in DB. Skipping.")
             continue
 
+        db.save_raw_post(post)
+
         # Stage 1: Fast keyword check
         if classifier.is_keyword_candidate(post):
             logging.info(f"🔍 Analyzing candidate post: {post.title[:50]}...")
@@ -65,7 +68,9 @@ def main() -> None:
                 success = notifier.send_lead_alert(lead)
 
                 if success:
-                    print("✅ DISCORD ALERT SENT SUCCESSFULLY! Check your Discord channel.\n")
+                    print(
+                        "✅ DISCORD ALERT SENT SUCCESSFULLY! Check your Discord channel.\n"
+                    )
                     alert_sent = True
                     break  # Break after sending 1 test alert
                 else:
