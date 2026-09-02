@@ -86,7 +86,7 @@ class DatabaseAdapter:
                 status=lead.status,
                 processed_at=datetime.now(timezone.utc),
             )
-            session.merge(record)  # Upsert (insert or update)
+            session.add(record)
             session.commit()
             logging.info(
                 f"Saved lead {lead.post.id} to DB (Score: {lead.analysis.score})"

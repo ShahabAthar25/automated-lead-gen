@@ -1,54 +1,36 @@
+import asyncio
 import logging
-from pprint import pprint
+import signal
+import sys
 
-from reddit_lead_gen.adapters import database
-from reddit_lead_gen.adapters.database import DatabaseAdapter
-from reddit_lead_gen.adapters.messaging import DiscordNotifier
-from reddit_lead_gen.adapters.reddit_client import RedditClient
-from reddit_lead_gen.core.classifier import LeadClassifier
-from reddit_lead_gen.core.pipeline import LeadPipeline
-from reddit_lead_gen.models.reddit import QualifiedLead
+from reddit_lead_gen.core.listener import MultiSubredditAdaptiveListener
+from reddit_lead_gen.settings import settings
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 
 
-def main() -> None:
-    print("\n--- 🚀 STARTING DISCORD WEBHOOK & PIPELINE TEST ---")
+async def main():
+    # Everything (Pipeline, DB, Subreddits, Trackers) defaults to settings
+    listener = MultiSubredditAdaptiveListener()
 
-    # Initialize all adapters and services
-    client = RedditClient()
-    db = DatabaseAdapter()
-    classifier = LeadClassifier()
-    notifier = DiscordNotifier()
-    pipeline = LeadPipeline(db, classifier, notifier)
+    # Graceful shutdown handler
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, lambda: listener.stop())
+        except NotImplementedError:
+            pass  # Windows compatibility
 
-    # Check Webhook config
-    if not notifier.webhook_url:
-        logging.error(
-            "❌ DISCORD_WEBHOOK_URL is missing from your .env file! "
-            "Add it before running this test."
-        )
-        return
-
-    # Fetch fresh posts
-    target_subreddit = "forhire"
-    print(f"\n📡 Fetching posts from r/{target_subreddit}...")
-    posts = client.fetch_subreddit_posts(target_subreddit)
-    print(f"Fetched {len(posts)} posts.\n")
-
-    pprint(posts)
-
-    alert_sent = False
-
-    # Process candidate posts
-    for post in posts:
-
-        lead = pipeline.process_post(post)
-        if lead:
-            alert_sent = True
-            break
+    # Just start the listener ticker loop directly
+    await listener.start()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt, SystemExit:
+        logging.info("👋 Engine shut down successfully.")

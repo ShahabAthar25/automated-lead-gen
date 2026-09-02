@@ -70,7 +70,7 @@ class MultiSubredditAdaptiveListener:
 
     def __init__(
         self,
-        subreddits: List[str],
+        subreddits: List[str] | None = None,
         pipeline: LeadPipeline | None = None,
         reddit_client: RedditClient | None = None,
         poll_tick_seconds: int | None = None,
@@ -78,6 +78,8 @@ class MultiSubredditAdaptiveListener:
         self.pipeline = pipeline or LeadPipeline()
         self.client = reddit_client or RedditClient()
         self.poll_tick = poll_tick_seconds or settings.polling.poll_tick_seconds
+
+        self.running = False
 
         target_subs = subreddits or settings.target_subreddits.active
         self.trackers: Dict[str, SubredditTracker] = {}
@@ -95,13 +97,20 @@ class MultiSubredditAdaptiveListener:
             else:
                 self.trackers[sub] = SubredditTracker(name=sub)
 
+    def stop(self):
+        """Triggers graceful shutdown of the ticker loop."""
+        logging.info("🛑 Stopping listener ticker loop...")
+        self.running = False
+
     async def start(self) -> None:
         """Continuous ticker loop that checks individual subreddit readiness."""
+        self.running = True
+
         logging.info(
             f"🎧 Starting Independent Per-Subreddit Listener for: {list(self.trackers.keys())}"
         )
 
-        while True:
+        while self.running:
             now = time.time()
 
             for sub_name, tracker in self.trackers.items():

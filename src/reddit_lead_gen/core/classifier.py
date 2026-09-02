@@ -8,7 +8,7 @@ from reddit_lead_gen.models.reddit import RedditRSSPost
 from reddit_lead_gen.settings import settings
 
 
-def _build_classifier_prompt(post) -> str:
+def _build_classifier_prompt(post: RedditRSSPost) -> str:
     """Builds a dynamic prompt tailored to the user's specific skill set and dealbreakers."""
 
     services_list = "\n".join([f"- {s}" for s in settings.user_profile.target_services])
@@ -29,7 +29,7 @@ Strict Dealbreakers (Automatic Disqualification):
 Analyze the following Reddit post:
 Subreddit: r/{post.subreddit}
 Title: {post.title}
-Body: {post.selftext}
+Body: {post.body}
 Tags: {post.tags}
 
 Evaluation Rules:

@@ -11,7 +11,7 @@ log_level = "INFO"
 [target_subreddits]
 active = [
     "forhire",
-    "freelance_forhire",
+    "freelancing",
     "python",
     "webscraping"
 ]
