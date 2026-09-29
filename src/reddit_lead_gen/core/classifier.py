@@ -1,10 +1,13 @@
 import logging
+from typing import Tuple
 
 from google import genai
 from google.genai import types
+from groq import Groq
 
-from reddit_lead_gen.models.gemini import LeadAnalysis
+from reddit_lead_gen.models.analysis import LeadAnalysis
 from reddit_lead_gen.models.reddit import RedditRSSPost
+from reddit_lead_gen.providers import GeminiProvider, GroqProvider
 from reddit_lead_gen.settings import settings
 
 
@@ -41,14 +44,23 @@ Evaluation Rules:
 
 class LeadClassifier:
     def __init__(self) -> None:
-        # Uses the google-genai SDK
-        self.client = genai.Client(api_key=settings.gemini_api_key)
+        if settings.pipeline.llm_model == "gemini":
+            self.provider = GeminiProvider(api_key=settings.gemini_api_key)
+        elif settings.pipeline.llm_model == "groq":
+            self.provider = GroqProvider(api_key=settings.groq_api_key)
+        else:
+            raise ValueError(f"Unsupported LLM provider: {settings.pipeline.llm_model}")
 
     def is_keyword_candidate(self, post: RedditRSSPost) -> bool:
         """Stage 1: Fast local keyword pre-filter."""
         title_lower = post.title.lower()
         body_lower = post.body.lower()
         combined_text = f"{title_lower} {body_lower}"
+
+        if any(
+            bad_kw in combined_text for bad_kw in settings.pipeline.disqualify_keywords
+        ):
+            return False
 
         if not any(
             good_kw in combined_text for good_kw in settings.pipeline.candidate_keywords
@@ -57,33 +69,16 @@ class LeadClassifier:
 
         return True
 
-    def classify_lead(self, post: RedditRSSPost) -> tuple[float, LeadAnalysis | None]:
+    def classify_lead(self, post: RedditRSSPost) -> Tuple[float, LeadAnalysis | None]:
         """Stage 2: LLM Intent Analysis."""
-        if not self.is_keyword_candidate(post):
-            return 0.0, None
-
         tags_str = ", ".join(post.tags) if post.tags else "None"
 
         prompt = _build_classifier_prompt(post)
 
         try:
-            # Force structured JSON response matching LeadAnalysis schema
-            response = self.client.models.generate_content(
-                model="gemini-3.6-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=LeadAnalysis,
-                    temperature=1.0,
-                ),
-            )
+            score, analysis = self.provider.analyze(prompt)
 
-            # Parse returned structured JSON into Pydantic model
-            analysis = LeadAnalysis.model_validate_json(response.text)
-
-            # If author is NOT hiring, force score to 0
-            final_score = analysis.score if analysis.is_hiring else 0.0
-            return final_score, analysis
+            return score, analysis
 
         except Exception as e:
             logging.error(f"LLM Classification failed for post {post.id}: {e}")

@@ -45,6 +45,7 @@ class SubredditTracker:
 
     def update_interval(self, total_fetched: int, new_posts_count: int) -> None:
         """Adjusts ONLY this subreddit's interval based on its own velocity."""
+        logging.info(f"Current interval set to {self.current_interval}")
         if total_fetched == 0:
             self.current_interval = min(self.max_interval, self.current_interval * 1.25)
             return

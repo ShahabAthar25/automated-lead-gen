@@ -1,36 +1,43 @@
 import calendar
 import time
 from datetime import datetime, timezone
+
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field, HttpUrl
 
 from reddit_lead_gen.db.leads import QualifiedLeadORM
-
-from reddit_lead_gen.models.gemini import LeadAnalysis
+from reddit_lead_gen.models.analysis import LeadAnalysis
 
 
 class RedditRSSPost(BaseModel):
     """
-    Pydantic schema representing raw RSS feed entries transformed into 
+    Pydantic schema representing raw RSS feed entries transformed into
     clean, structured post objects.
     """
+
     id: str = Field(description="RSS post ID (e.g., t3_1w1gymd)")
     title: str = Field(description="Title of the Reddit post")
     permalink: HttpUrl = Field(description="Direct URL to the post")
     author: str = Field(description="Username of the poster")
-    body: str = Field(default="", description="Clean plain-text extracted from summary HTML")
+    body: str = Field(
+        default="", description="Clean plain-text extracted from summary HTML"
+    )
     created_utc: datetime = Field(description="Timestamp when post was published")
     subreddit: str = Field(default="unknown", description="Subreddit name")
-    tags: list[str] = Field(default_factory=list, description="Categories or flair tags")
+    tags: list[str] = Field(
+        default_factory=list, description="Categories or flair tags"
+    )
     score: float = Field(default=0.0, description="Lead score assigned by classifier")
-    
+
     # Placeholder for optional JSON comment-count fetch later
-    num_comments: int | None = Field(default=None, description="Set via optional JSON check")
+    num_comments: int | None = Field(
+        default=None, description="Set via optional JSON check"
+    )
 
     @classmethod
     def from_rss_entry(cls, entry: dict, subreddit: str = "unknown") -> "RedditRSSPost":
         """
-        Factory method to parse a raw feedparser dictionary into a validated 
+        Factory method to parse a raw feedparser dictionary into a validated
         RedditRSSPost model instance.
         """
         # Clean HTML body & preserve embedded URLs (Text (http://...))
@@ -63,8 +70,8 @@ class RedditRSSPost(BaseModel):
         # Extract tag names safely
         raw_tags = entry.get("tags", [])
         tags = [
-            t.get("term").strip() 
-            for t in raw_tags 
+            t.get("term").strip()
+            for t in raw_tags
             if isinstance(t, dict) and t.get("term") and isinstance(t.get("term"), str)
         ]
 
@@ -82,20 +89,24 @@ class RedditRSSPost(BaseModel):
             tags=tags,
         )
 
+
 class QualifiedLead(BaseModel):
     """
-    Combined domain model representing a high-value lead 
+    Combined domain model representing a high-value lead
     ready for database storage and alert notifications.
     """
+
     post: RedditRSSPost
     analysis: LeadAnalysis
-    status: str = Field(default="new", description="Outreach status: 'new', 'contacted', 'ignored'")
+    status: str = Field(
+        default="new", description="Outreach status: 'new', 'contacted', 'ignored'"
+    )
 
     @property
     def is_actionable(self) -> bool:
         """Helper to verify lead quality."""
         return self.analysis.is_hiring and self.analysis.score >= 0.7
-    
+
     @classmethod
     def from_db_record(cls, record: "QualifiedLeadORM") -> "QualifiedLead":
         """Convert a SQLAlchemy LeadTable row back into a QualifiedLead model."""
@@ -124,5 +135,3 @@ class QualifiedLead(BaseModel):
         )
 
         return cls(post=post, analysis=analysis, status=record.status)
-
-

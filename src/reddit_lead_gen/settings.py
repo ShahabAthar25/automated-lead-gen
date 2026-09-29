@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -41,6 +41,8 @@ class PollingConfig(BaseModel):
 class PipelineConfig(BaseModel):
     min_lead_score: float = 0.70
     candidate_keywords: List[str] = ["hiring", "budget", "looking for", "developer"]
+    disqualify_keywords: List[str] = ["[forhire]", "forhire"]
+    llm_model: Literal["groq", "gemini"] = "groq"
 
 
 class UserProfileConfig(BaseModel):
@@ -67,6 +69,8 @@ class Settings(BaseSettings):
     reddit_username: str
 
     gemini_api_key: str
+    groq_api_key: str
+
     discord_webhook_url: str
 
     # Operational Sections (populated via config.toml)

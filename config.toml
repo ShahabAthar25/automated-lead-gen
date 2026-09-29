@@ -1,6 +1,6 @@
 # ==============================================================================
 # REDDIT LEAD GENERATION ENGINE — OPERATIONAL CONFIGURATION
-# (Sensitive credentials like GEMINI_API_KEY belong in .env)
+# (Sensitive credentials like GEMINI_API_KEY are in .env)
 # Built by: Shahab Athar (https://github.com/ShahabAthar25)
 # ==============================================================================
 
@@ -13,7 +13,14 @@ active = [
     "forhire",
     "freelancing",
     "python",
-    "webscraping"
+    "webscraping",
+    "Jobs4Bitcoins",
+    "B2BForHire",
+    "WorkOnline",
+    "RemoteJobs",
+    "DesignJobs",
+    "slavelabour",
+    "hiringpakistan"
 ]
 
 [polling]
@@ -46,18 +53,30 @@ candidate_keywords = [
     "django",
     "api",
     "backend",
+    "[task]",
+    "task",
     "[hiring]",
 ]
+
+disqualify_keywords = [
+  "[forhire]",
+  "forhire",
+  "for hire",
+  "[for hire]",
+  "[forhire]",
+]
+
+llm_model = "gemini" # groq, gemini
 
 [user_profile]
 # If you have a problem with the classification of the post and want to change the prompt
 # do it in src/reddit_lead_gen/core/classifier.py
-primary_role = "Python Automation & Full-Stack Developer"
+primary_role = "Python Automation & Full-Stack Developer. I am looking for a job and need asap so accept any job which I can do not the best fitted but I can like virtual assistant, data entry, web dev, automation, or any other which I can do."
 target_services = [
     "Web Scraping & Data Extraction",
     "Automation Scripts & Bots",
     "API Development & Backend Integration",
-    "Full-Stack Web Applications (FastAPI, React)"
+    "Full-Stack Web Applications"
 ]
 
 dealbreakers = [
