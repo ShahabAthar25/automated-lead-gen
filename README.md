@@ -120,4 +120,4 @@ Contributions are welcome. The project is actively updated as my workflow and op
 
 # License
 
-Feel free to use any part of this project as your own. It is licensed under the MIT License.
+Feel free to use any part of this project as your own. It is licensed under the GNU GENERAL PUBLIC LICENSE.
