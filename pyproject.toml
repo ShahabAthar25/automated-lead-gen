@@ -3,7 +3,7 @@ name = "automated-lead-gen"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "ShahabAthar25",email = "shahabathar25@gmail.com"}
+    {name = "shahabathar25",email = "shahabathar25@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.14,<4.0"
@@ -16,7 +16,7 @@ dependencies = [
     "pydantic (>=2.13.5,<3.0.0)",
     "pydantic-settings[toml] (>=2.15.0,<3.0.0)",
     "beautifulsoup4 (>=4.15.0,<5.0.0)",
-    "google-genai (>=2.20.0,<3.0.0)",
+    "google-genai>=2.20.0,<3.0.0",
     "sqlalchemy (>=2.0.52,<3.0.0)",
     "tabulate (>=0.10.0,<0.11.0)",
     "groq (>=1.7.0,<2.0.0)",
@@ -28,3 +28,9 @@ packages = [{include = "reddit_lead_gen", from = "src"}]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio>=1.4.0",
+]

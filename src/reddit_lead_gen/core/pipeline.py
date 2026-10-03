@@ -1,9 +1,11 @@
+import asyncio
 import logging
 
 from reddit_lead_gen.adapters.database import DatabaseAdapter
 from reddit_lead_gen.adapters.messaging import DiscordNotifier
 from reddit_lead_gen.core.classifier import LeadClassifier
 from reddit_lead_gen.models.reddit import QualifiedLead, RedditRSSPost
+from reddit_lead_gen.providers.router import ModelRouter
 from reddit_lead_gen.settings import settings
 
 
@@ -14,13 +16,14 @@ class LeadPipeline:
         classifier: LeadClassifier | None = None,
         notifier: DiscordNotifier | None = None,
         min_score: float | None = None,
+        router: ModelRouter | None = None,
     ) -> None:
         self.db: DatabaseAdapter = db or DatabaseAdapter()
-        self.classifier: LeadClassifier = classifier or LeadClassifier()
+        self.classifier: LeadClassifier = classifier or LeadClassifier(router=router)
         self.notifier: DiscordNotifier = notifier or DiscordNotifier()
         self.min_score = min_score or settings.pipeline.min_lead_score
 
-    def process_post(self, post: RedditRSSPost):
+    async def process_post(self, post: RedditRSSPost) -> QualifiedLead | None:
         """
         Classifies post and stores them in the database. Skips all duplicate posts.
         """
@@ -38,8 +41,8 @@ class LeadPipeline:
 
         logging.info(f"🔍 Analyzing candidate post: {post.title[:50]}...")
 
-        # Stage 2: Gemini LLM classification
-        score, analysis = self.classifier.classify_lead(post)
+        # Stage 2: LLM classification via ModelRouter
+        score, analysis = await self.classifier.classify_lead(post)
 
         if not analysis or score < self.min_score:
             return None  # Will add disapproved leads later for testing and checking
@@ -61,3 +64,18 @@ class LeadPipeline:
                 logging.error("❌ Failed to send Discord alert.")
 
         return lead
+
+    def process_post_sync(self, post: RedditRSSPost) -> QualifiedLead | None:
+        """Synchronous wrapper for scripts and testing."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, self.process_post(post)).result()
+        else:
+            return asyncio.run(self.process_post(post))

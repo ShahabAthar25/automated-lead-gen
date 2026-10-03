@@ -46,9 +46,9 @@ def debug_specific_post(target_post_id: str, subreddit: str = "forhire") -> None
     else:
         print("✅ PASSED STAGE 1 (Keyword candidate matched)")
 
-    # Test Stage-2: Gemini LLM Classification
-    print("\n--- STAGE 2: GEMINI LLM CLASSIFICATION ---")
-    score, analysis = classifier.classify_lead(target_post)
+    # Test Stage-2: LLM Classification via ModelRouter
+    print("\n--- STAGE 2: LLM CLASSIFICATION (ModelRouter) ---")
+    score, analysis = classifier.classify_lead_sync(target_post)
 
     if not analysis:
         print("❌ REJECTED AT STAGE 2")

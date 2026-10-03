@@ -43,6 +43,9 @@ class PipelineConfig(BaseModel):
     candidate_keywords: List[str] = ["hiring", "budget", "looking for", "developer"]
     disqualify_keywords: List[str] = ["[forhire]", "forhire"]
     llm_model: Literal["groq", "gemini"] = "groq"
+    min_spacing_seconds: float = 5.0
+    gemini_rpm: int = 10
+    groq_rpm: int = 20
 
 
 class UserProfileConfig(BaseModel):

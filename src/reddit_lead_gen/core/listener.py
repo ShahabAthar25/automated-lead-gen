@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from reddit_lead_gen.adapters.reddit_client import RedditClient
 from reddit_lead_gen.core.pipeline import LeadPipeline
+from reddit_lead_gen.providers.router import ModelRouter
 from reddit_lead_gen.settings import settings
 
 
@@ -75,8 +76,9 @@ class MultiSubredditAdaptiveListener:
         pipeline: LeadPipeline | None = None,
         reddit_client: RedditClient | None = None,
         poll_tick_seconds: int | None = None,
+        router: ModelRouter | None = None,
     ) -> None:
-        self.pipeline = pipeline or LeadPipeline()
+        self.pipeline = pipeline or LeadPipeline(router=router)
         self.client = reddit_client or RedditClient()
         self.poll_tick = poll_tick_seconds or settings.polling.poll_tick_seconds
 
@@ -133,7 +135,7 @@ class MultiSubredditAdaptiveListener:
             for post in posts:
                 # Deduplication check before pipeline execution
                 is_unseen = not self.pipeline.db.is_post_seen(post.id)
-                lead = self.pipeline.process_post(post)
+                lead = await self.pipeline.process_post(post)
 
                 if lead is not None or is_unseen:
                     new_posts_count += 1

@@ -8,12 +8,14 @@ from reddit_lead_gen.providers.base import BaseLLMProvider
 
 
 class GeminiProvider(BaseLLMProvider):
+    name: str = "Gemini"
+
     def __init__(self, api_key: str):
         self.client = genai.Client(api_key=api_key)
 
     @override
-    def analyze(self, prompt: str) -> Tuple[float, LeadAnalysis | None]:
-        response = self.client.models.generate_content(
+    async def analyze(self, prompt: str) -> Tuple[float, LeadAnalysis | None]:
+        response = await self.client.aio.models.generate_content(
             model="gemini-3.6-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
